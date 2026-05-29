@@ -8,14 +8,15 @@ description: URL-first long-video clip skill for YouTube and Bilibili links, or 
 这个 skill 的主入口是 **视频 URL 或已下载本地源文件**。
 默认流程是：
 
+0. 先主动确认交互模式和 B-roll 素材状态
 1. 识别平台与环境
 2. 抓取或接管高清视频和字幕
 3. 解析字幕并发现候选片段
 4. 按传播潜力排序
-5. 先让用户确认 Top 1 / Top 2 / Top 3
+5. 根据交互模式决定是否让用户确认 Top 1 / Top 2 / Top 3
 6. 用户确认后，再继续到 B-roll、双语字幕和最终成片
 
-如果用户已经明确要求“直接出成片 / 直接生成带 B-roll 成片”，可以跳过候选展示，只保留必要的片段校验后进入渲染。
+如果用户已经明确要求“直接出成片 / 直接生成带 B-roll 成片 / Agent 自动选”，可以跳过候选确认，只保留必要的选择依据和片段校验后进入渲染。
 
 本 skill 默认目标是 **冲流量**，但前提是不编造、不扭曲原意。
 
@@ -81,6 +82,23 @@ python3 scripts/check_env.py --json
 
 ## 工作流
 
+### 0) 先确认交互模式和 B-roll 素材状态
+
+每次加载本 skill 后，一开始就主动问清楚两个问题：
+
+1. 片段选择模式：要我给 Top 候选让你挑，还是我按 skill 自动选择最值得剪的一段并直接继续？
+2. B-roll 素材状态：你是否已经准备本地 B-roll 素材目录？
+
+推荐提问：
+
+> 片段选择你希望怎么走：A. 我给 Top 候选你来挑；B. 我自动选择最值得剪的一段并直接做成片。另一个问题：你有本地 B-roll 素材目录吗？如果没有，我会默认从网络找免版权的震撼自然素材，并把素材和来源清单落到输出目录。
+
+如果用户选择 Agent 自动选，后续不要再停住要求用户从 Top 1 / Top 2 / Top 3 中选择。仍需输出 Top 候选和自动选择依据，但输出后直接继续剪辑策略、素材获取和渲染。
+
+如果用户没有素材，或用户没有回答但任务明显需要最终成片 / 带 B-roll，默认进入自动素材获取，不要停在“无素材可用”。自动素材规则见 [broll-sourcing.md](references/broll-sourcing.md)。
+
+如果用户提供本地素材目录，先接管本地素材；如果本地素材数量或主题不够，再自动补免版权自然素材。
+
 ### 1) 先做环境检测
 
 先跑环境检查，再决定是 URL 摄取还是本地接管。
@@ -145,13 +163,17 @@ python3 scripts/rank_segments.py --input <transcript-json> --mode traffic --top-
 
 ### 5) 先输出推荐列表，再停住等用户确认
 
-必须先给用户看候选列表，至少 Top 3，建议 Top 5。
+默认 `user_select` 模式下，必须先给用户看候选列表，至少 Top 3，建议 Top 5。
 
-不要在用户没选之前直接输出完整剪辑方案。
+`agent_auto_select` 模式下，也要输出候选列表和自动选择依据，但不要等待用户确认，直接把 Top 1 或综合最优片段固化为渲染片段。
 
-必须明确加一句：
+`user_select` 模式必须明确加一句：
 
 > 请从 Top 1 / Top 2 / Top 3 中选择一个片段，我再继续输出具体剪辑方案。
+
+`agent_auto_select` 模式必须明确写出：
+
+> 我将自动选择 Top X 作为最终片段，并继续生成成片。
 
 ### 6) 用户确认后再给剪辑策略
 
@@ -232,6 +254,7 @@ python3 scripts/verify_render.py --output-dir <clip-output-dir> --video <final.m
 ## B-roll 规则
 
 如果用户提供本地 B-roll 素材库，把它当成可调用资源池。
+如果用户没有提供，本 skill 默认主动获取免版权自然素材，优先使用震撼、抽象、情绪强的自然画面。不要因为没有本地素材就放弃 B-roll。
 
 优先标注三类用途：
 
@@ -259,6 +282,8 @@ B-roll 的目标不是喧宾夺主，而是：
 - 给金句留空间
 - 避免整段画面单调
 - 保护字幕的可读性
+
+自动素材必须写入 `asset_manifest.json`，至少记录素材文件、来源 URL、许可/来源说明、关键词、用途和下载时间。
 
 ## 输出格式
 
@@ -352,6 +377,7 @@ B-roll 的目标不是喧宾夺主，而是：
 
 - [environment-checklist.md](references/environment-checklist.md)
 - [source-ingestion.md](references/source-ingestion.md)
+- [broll-sourcing.md](references/broll-sourcing.md)
 - [output-layout.md](references/output-layout.md)
 - [scoring-rubric.md](references/scoring-rubric.md)
 - [output-format.md](references/output-format.md)

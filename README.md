@@ -7,7 +7,9 @@ Codex skill for turning long YouTube or Bilibili videos into ranked short-video 
 - Ingests YouTube, Bilibili, or local video sources.
 - Fetches platform subtitles when available.
 - Ranks high-potential clip segments.
+- Supports either user-selected candidates or Agent automatic selection.
 - Renders confirmed clips with A-roll, optional B-roll, burned subtitles, title suggestions, caption copy, and `render_manifest.json`.
+- If no local B-roll exists, defaults to sourcing royalty-free dramatic nature footage and recording it in `asset_manifest.json`.
 
 ## Quick Start
 

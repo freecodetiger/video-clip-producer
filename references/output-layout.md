@@ -25,6 +25,11 @@ outputs/<source_title>_<platform>_<theme>/
     source.srt
     source.ass
     manifest.json
+  00_assets/
+    broll/
+      01_storm_at_sea.mp4
+      02_lightning_clouds.mp4
+    asset_manifest.json
   00_index/
     切片目录.md
   00_concat/
@@ -65,11 +70,14 @@ outputs/<source_title>_<platform>_<theme>/
 - `参考帧/`
 - `subtitle_preview/`
 - `timing_report.json`
+- `00_assets/broll/`
+- `00_assets/asset_manifest.json`
 
 ## 原则
 
 - 生成目录只承载最终交付物
 - `source/` 只放输入落盘结果
+- `00_assets/` 只放可复用素材和素材来源清单
 - 临时文件放 `tmp/` 或系统临时目录
 - 不要把不同视频混在同一目录层级
 - 同一视频的所有切片必须落在同一根目录下

@@ -16,8 +16,10 @@
 - `source_title`
 - `clip_title`
 - `final_name`
+- `selection`
 - `render`
 - `subtitle`
+- `assets`
 - `titles`
 - `caption`
 - `bgm`
@@ -29,6 +31,35 @@
   {"type": "a", "start": 0.0, "end": 4.4},
   {"type": "b", "start": 4.4, "end": 8.9, "file": "/path/to/broll.mp4", "offset": 0.0}
 ]
+```
+
+## `selection` 结构
+
+如果用户选择 Agent 自动选片，render spec 应记录选择模式和理由：
+
+```json
+{
+  "mode": "agent_auto_select",
+  "selected_rank": 1,
+  "reason": "情绪张力、争议度、金句密度和视觉包装性综合最高",
+  "alternatives_considered": [2, 3, 4]
+}
+```
+
+## `assets` 结构
+
+当用户没有本地 B-roll 时，Agent 应主动获取免版权自然素材，并记录：
+
+```json
+{
+  "broll_source": "auto_web_royalty_free",
+  "asset_dir": "00_assets/broll",
+  "asset_manifest": "00_assets/asset_manifest.json",
+  "queries": [
+    "storm at sea royalty free video",
+    "aurora borealis timelapse royalty free video"
+  ]
+}
 ```
 
 ## `subtitle` 结构
