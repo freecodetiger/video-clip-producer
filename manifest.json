@@ -2,6 +2,7 @@
   "name": "video-clip-producer",
   "version": "2.2.0",
   "category": "Video Analysis / Clip Strategy",
+  "license": "MIT",
   "description": "URL-first long-video clip skill for YouTube and Bilibili. Downloads or adopts local HD video, fetches subtitles with login-state cookies, ranks high-traffic candidates, and after user confirmation can continue into bilingual B-roll clip production, final package rendering, and render verification.",
   "compat": [
     "claude-code",
