@@ -1,0 +1,53 @@
+{
+  "skill_name": "video-clip-producer",
+  "evals": [
+    {
+      "id": 1,
+      "name": "local-source-takeover",
+      "prompt": "用户已经手动下载好了本地视频和字幕文件，要求你不要重新下载，直接接管本地源，先分析候选片段，再等他确认后继续做成片。输出应该怎么组织？",
+      "expected_output": "明确把本地 source.mp4 / 字幕文件作为输入接管，先做环境检查和候选排序，再停在用户确认门，不要求重新下载。",
+      "files": [],
+      "assertions": [
+        "必须识别这是本地接管而不是 URL 下载",
+        "必须先输出候选片段而不是直接成片",
+        "必须停在用户确认门"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "subtitle-offset-fix",
+      "prompt": "用户说字幕整体晚了 0.5 秒，要求一开口字幕就出现，中文为主，英文为辅，不要重新估时整段字幕。你会怎么处理？",
+      "expected_output": "使用源字幕时间戳作为基础，先做全局 offset，再必要时单句 patch，避免重新估时整段字幕。",
+      "files": [],
+      "assertions": [
+        "必须优先使用源字幕时间戳",
+        "必须提到全局 offset 修正",
+        "必须避免把整段字幕重新估时"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "ranking-before-render",
+      "prompt": "用户给你一个 YouTube 链接和一个 B-roll 目录，只想先看 Top 5 候选片段，不要直接进入剪辑。你应该如何输出？",
+      "expected_output": "先给候选表格和排序理由，至少 Top 3 / 推荐 Top 5，然后明确等待用户确认。",
+      "files": [],
+      "assertions": [
+        "必须输出候选列表和排序",
+        "必须包含传播价值维度",
+        "必须明确请求用户确认"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "render-spec-and-dry-run",
+      "prompt": "用户已经确认要剪 Top 1 片段，并要求最终落盘。你应该如何进入渲染阶段，怎样避免直接盲渲？",
+      "expected_output": "生成 render spec，先 dry-run，再正式执行 render_clip.py，最后输出 render_manifest 和成片路径。",
+      "files": [],
+      "assertions": [
+        "必须提到 render spec",
+        "必须提到 dry-run",
+        "必须提到 render_clip.py 或统一渲染入口"
+      ]
+    }
+  ]
+}

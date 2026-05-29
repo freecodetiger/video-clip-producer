@@ -1,0 +1,7 @@
+interface:
+  display_name: "Video Clip Producer"
+  short_description: "Download YouTube/Bilibili URLs and rank best clips"
+  default_prompt: "Use $video-clip-producer to download a YouTube or Bilibili URL, fetch subtitles with login-state cookies, rank the best clip candidates, and stop for my Top 1/2/3 confirmation."
+
+policy:
+  allow_implicit_invocation: true
