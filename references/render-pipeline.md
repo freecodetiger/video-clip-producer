@@ -17,6 +17,7 @@
    - 记录 B-roll 插入点
    - 记录字幕模式
    - 记录字幕偏移量
+   - 记录字幕布局参数：底边距、单行长度、断句策略
 
 2. 生成视频轨
    - 先做纯 A-roll
@@ -31,6 +32,8 @@
    - 优先使用源时间戳
    - 先做全局 offset
    - 再做局部 patch
+   - 对长句做语义断句和多行拆分
+   - 字幕位置先保可读，再保美观
    - 输出 `ass` 和 `srt`
 
 5. 烧录字幕并合成
@@ -55,6 +58,12 @@
   "end": 48.72,
   "subtitle_mode": "source_offset",
   "subtitle_offset": 1.0,
+  "subtitle_layout": {
+    "bottom_margin_px": 108,
+    "max_chars_per_line": 22,
+    "semantic_breaks": true,
+    "split_long_lines": true
+  },
   "broll_used": true,
   "final_video": "...",
   "subtitle_ass": "...",

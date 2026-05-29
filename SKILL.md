@@ -15,6 +15,8 @@ description: URL-first long-video clip skill for YouTube and Bilibili links, or 
 5. 先让用户确认 Top 1 / Top 2 / Top 3
 6. 用户确认后，再继续到 B-roll、双语字幕和最终成片
 
+如果用户已经明确要求“直接出成片 / 直接生成带 B-roll 成片”，可以跳过候选展示，只保留必要的片段校验后进入渲染。
+
 本 skill 默认目标是 **冲流量**，但前提是不编造、不扭曲原意。
 
 ## 核心定位
@@ -41,25 +43,31 @@ description: URL-first long-video clip skill for YouTube and Bilibili links, or 
 
 ## 必须先做的环境检查
 
-在开始之前，先确认这些条件：
+在开始之前，先确认这些条件。这里是**能力检查**，不是装机检查。
 
-- Agent 工具正常
-- shell 和文件系统可用
-- `python3` 可用
-- `yt-dlp` 可用
-- `ffmpeg` / `ffprobe` 可用
-- `ffmpeg` 支持 `subtitles`
-- `ffmpeg` 支持 `drawtext`
-- `ffmpeg` 编译时包含 `libass`
-- 输出目录可写
-- 如果要抓登录态字幕，cookies 可用
-- 如果要做分镜，B-roll 目录存在且可读
+原则：
+
+- 先探测现有环境能不能完成当前任务
+- 先复用 PATH、用户已有安装、已知绝对路径
+- 只有在“当前任务确实缺能力”时才补缺，不主动新装臃肿环境
+- 不为了通过检查而引入新的虚拟环境、conda、容器或包管理层，除非用户明确要求
+
+按任务分层检查：
+
+- 通用：Agent 工具、shell、文件读写、输出目录可写
+- 摄取阶段：`python3`、`yt-dlp`、`ffmpeg`、`ffprobe`
+- 字幕烧录阶段：`ffmpeg` 支持 `subtitles`，并且当前渲染路径需要时才要求 `libass`
+- 文字叠加阶段：只有用到 `drawtext` 时才检查
+- 登录态字幕：只有抓字幕时才检查 cookies
+- B-roll：只有要做分镜时才要求 B-roll 目录可读
 
 优先运行：
 
 ```bash
 python3 scripts/check_env.py --json
 ```
+
+如果这个检查脚本要求过多能力，先用任务实际需要的能力做二次判断，不要因为某个可选能力缺失就把整套环境判死。
 
 ## 输入优先级
 
@@ -69,6 +77,7 @@ python3 scripts/check_env.py --json
 
 如果字幕抓取失败，不要默认改成本地大模型转写；先确认 cookies / 登录态 / 字幕源。
 如果用户已经提供了可用字幕，不要重做一遍转写。
+如果用户明确要求直接成片，不要再强制回到候选列表阶段。
 
 ## 工作流
 
@@ -85,6 +94,7 @@ python3 scripts/check_env.py --json
 - 字幕抓取
 - 登录态复用：`--cookies-from-browser` 或 `--cookies`
 - 生成下载清单与字幕路径
+- Bilibili 下载后用 `ffprobe` 校验视频轨和音轨，避免容器成功但视频轨异常短
 
 当用户已经给了本地视频时，直接接管该文件并继续：
 
@@ -95,6 +105,8 @@ python3 scripts/check_env.py --json
 不要要求用户重新下载同一个文件。
 
 优先下载最佳可用画质，并优先拿手动字幕；没有手动字幕时再用自动字幕。
+
+处理 Bilibili 时，必须阅读 [source-ingestion.md](references/source-ingestion.md) 的 Bilibili 实战规则。默认优先 H.264 mp4 轨道和登录态 cookies；如果下载后视频轨明显短于音轨，删除坏文件并用 H.264 fallback 重拉，不要继续拿坏源渲染。
 
 ### 3) 规范化字幕
 
@@ -169,6 +181,13 @@ python3 scripts/rank_segments.py --input <transcript-json> --mode traffic --top-
 - 再烧录双语字幕
 - 再导出 `配文.md` 和 `推荐标题.md`
 - 最后写 `render_manifest.json`
+
+渲染态要显式记录字幕布局参数，至少包括：
+
+- 字幕底边距
+- 最大单行长度
+- 断句策略
+- 字幕是否需要两行拆分
 
 优先调用：
 

@@ -37,6 +37,12 @@
 {
   "mode": "source_offset",
   "advance_seconds": 0.5,
+  "layout": {
+    "bottom_margin_px": 108,
+    "max_chars_per_line": 22,
+    "semantic_breaks": true,
+    "split_long_lines": true
+  },
   "items": [
     {"start": 0.28, "end": 2.15, "cn": "中文主字幕", "en": "English subtitle"}
   ]
@@ -57,3 +63,4 @@
 - 先用 `--print-spec-template` 生成样例
 - 先用 `--dry-run` 检查路径和命令
 - 真正渲染前，先确认字幕偏移值和 B-roll 插入点
+- 如果用户已经确认片段，不要再强制回到候选推荐流程
