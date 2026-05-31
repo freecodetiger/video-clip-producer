@@ -1,81 +1,85 @@
 # Render Pipeline
 
-这个流程适用于用户已经确认某个候选片段，要继续生成最终成片的阶段。
+这个流程只在片段已经选定后执行。未选定片段时，停在候选选择门。
 
 ## 输入
 
-- 已确认的片段起止时间
-- 源视频或已接管本地视频
-- 源字幕或转写
-- 本地 B-roll 目录（如有）
-- 输出根目录
+- `source/manifest.json`
+- 干净源视频
+- `subtitles/normalized_cues.json`
+- `segments/selected_segment.json`
+- `assets/broll_plan.json`
+- `render_specs/render_spec.json`
 
-## 标准步骤
+## 步骤
 
-1. 固化片段配置
-   - 记录起止时间
-   - 记录 B-roll 插入点
-   - 记录字幕模式
-   - 记录字幕偏移量
-   - 记录字幕布局参数：底边距、单行长度、断句策略
+1. 固化 render spec
+   - 写入 `segment_start` / `segment_end`
+   - 写入 `subtitle_source`、`subtitle_lead_sec`、`subtitle_mode`
+   - 写入 `layout_profile`
+   - 写入 `broll_plan`
+   - `render_final` 必须确认 `subtitle_burn_source_is_clean: true`
 
-2. 生成视频轨
-   - 先做纯 A-roll
-   - 再拼接分镜 B-roll
-   - 保持总时长与音频一致
+2. 生成字幕
+   - 只从 `normalized_cues.json` 生成 ASS/SRT
+   - 使用 `display_start` / `display_end`
+   - 中英文同一个 cue，同起同落
+   - 滚动字幕使用 lane/slot 分配
+   - 输出 `subtitles_preview.ass`、`subtitles_final.ass`、`subtitle_timing_report.json`
 
-3. 生成音轨
-   - 从源视频截取对应区间
-   - 如果需要，做响度归一
+3. 生成视频轨
+   - A-roll 从源视频截取
+   - B-roll 按 plan 覆盖
+   - B-roll 不得遮挡字幕安全区
 
-4. 生成字幕
-   - 优先使用源时间戳
-   - 先做全局 offset
-   - 再做局部 patch
-   - 对长句做语义断句和多行拆分
-   - 字幕位置先保可读，再保美观
-   - 输出 `ass` 和 `srt`
+4. 生成音轨
+   - 从源视频同一区间截取
+   - 默认做 `loudnorm`
 
 5. 烧录字幕并合成
-   - 使用 `libass`
-   - 保证中文主、英文副
-   - 输出最终 mp4
+   - 使用 `ass` / `libass`
+   - 使用 `libx264` + `aac`
+   - 输出 `final.mp4`
 
-6. 生成交付文件
-   - `配文.md`
-   - `推荐标题.md`
-   - `render_manifest.json`
-   - 可选预览帧
+6. 写 manifest
+   - 字幕 lead、cue 数、lane 位置
+   - B-roll 覆盖率
+   - ffmpeg 路径/版本
+   - 输入 hash、输出 hash
+   - 验证结果
 
-## `render_manifest.json` 建议字段
+7. 严格校验
+   - `verify_render.py --spec ... --strict`
+   - 生成 `qa_report.json`
+   - 抽帧覆盖开头、中段、结尾、字幕密集处、B-roll 叠加处
+
+## 阻塞条件
+
+- 源视频不可确认干净且需要烧字幕。
+- `normalized_cues.json` 缺失或 cue 字段不完整。
+- ASS 同层时间重叠。
+- final 模式缺 B-roll 来源清单。
+- strict verification 失败。
+
+## Manifest 核心字段
 
 ```json
 {
-  "source_url": "...",
-  "source_title": "...",
-  "clip_title": "...",
-  "start": 0.0,
-  "end": 48.72,
-  "subtitle_mode": "source_offset",
-  "subtitle_offset": 1.0,
-  "subtitle_layout": {
-    "bottom_margin_px": 108,
-    "max_chars_per_line": 22,
-    "semantic_breaks": true,
-    "split_long_lines": true
-  },
+  "source_video": "source/source.mp4",
+  "start": 483.6,
+  "end": 532.32,
+  "duration": 48.72,
+  "subtitle_mode": "rolling_bilingual",
+  "source_time_basis": "subtitles/normalized_cues.json",
+  "lead_sec": 0.8,
+  "subtitle_burn_source_is_clean": true,
+  "cue_count": 32,
+  "lane_bottoms": [76, 150],
   "broll_used": true,
-  "final_video": "...",
-  "subtitle_ass": "...",
-  "subtitle_srt": "...",
-  "notes_md": "...",
-  "title_md": "..."
+  "broll_coverage": 0.42,
+  "final_video": "renders/final.mp4",
+  "subtitle_ass": "subtitles/subtitles_final.ass",
+  "input_hash": "...",
+  "output_hash": "..."
 }
 ```
-
-## 原则
-
-- 不要把字幕对齐当成一次性黑盒
-- 不要让 B-roll 破坏字幕可读性
-- 不要在最终目录里塞临时文件
-- 不要在用户未确认前进入渲染

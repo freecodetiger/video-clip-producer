@@ -59,8 +59,25 @@ def clamp(v: float, lo: float = 0.0, hi: float = 100.0) -> float:
 def read_segments(path: Path) -> list[dict]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(data, dict):
-        data = data.get("segments") or data.get("items") or data.get("data") or []
-    return data
+        data = data.get("cues") or data.get("segments") or data.get("items") or data.get("data") or []
+    rows = []
+    for item in data:
+        if "source_start" in item or "source_end" in item:
+            text = " ".join(
+                str(item.get(key) or "").strip()
+                for key in ("zh", "en")
+                if str(item.get(key) or "").strip()
+            )
+            rows.append(
+                {
+                    "start": item.get("source_start", item.get("display_start")),
+                    "end": item.get("source_end", item.get("display_end")),
+                    "text": text,
+                }
+            )
+        else:
+            rows.append(item)
+    return rows
 
 
 def score_text(text: str, mode: str) -> dict:

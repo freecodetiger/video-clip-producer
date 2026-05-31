@@ -1,45 +1,112 @@
 # Video Clip Producer
 
-Codex skill for turning long YouTube or Bilibili videos into ranked short-video candidates and final rendered clips with subtitles, B-roll, captions, titles, and a render manifest.
+Codex skill for turning long YouTube, Bilibili, or local videos into ranked short-video candidates and renderable final clips with normalized subtitles, B-roll planning, burned ASS subtitles, QA reports, and delivery manifests.
 
-## What It Does
+The skill is now organized as a stage-gated video production pipeline: every step has explicit inputs, outputs, commands, blocking conditions, and verification.
 
-- Ingests YouTube, Bilibili, or local video sources.
-- Fetches platform subtitles when available.
-- Ranks high-potential clip segments.
-- Supports either user-selected candidates or Agent automatic selection.
-- Renders confirmed clips with A-roll, optional B-roll, burned subtitles, title suggestions, caption copy, and `render_manifest.json`.
-- If no local B-roll exists, defaults to sourcing royalty-free dramatic nature footage and recording it in `asset_manifest.json`.
+## Modes
+
+- `candidate_only`: ingest source, normalize subtitles, rank candidates, then stop for selection.
+- `render_draft`: generate a reviewable draft; visual or B-roll gaps are allowed if recorded.
+- `render_final`: require clean source video, structured subtitles, B-roll/source manifest, render manifest, strict QA, and delivery artifacts.
+
+## Standard Output Layout
+
+```text
+<video_root>/
+  source/
+  subtitles/
+  segments/
+  assets/
+  render_specs/
+  renders/
+  qa/
+  delivery/
+```
+
+Final delivery must include `final.mp4`, `render_manifest.json`, `normalized_cues.json`, `subtitles_final.ass`, and `qa_report.json`.
 
 ## Quick Start
 
-Check only the capabilities needed for the current task:
+Check task-specific capabilities:
 
 ```bash
-python3 scripts/check_env.py --json --task ingest --url "https://www.bilibili.com/video/BVxxxx"
+python3 scripts/check_env.py --task ingest --json
+python3 scripts/check_env.py --task subtitle --json
+python3 scripts/check_env.py --task render --json
+python3 scripts/check_env.py --task final --json
 ```
 
-Ingest a Bilibili source with browser cookies:
+Ingest a URL:
 
 ```bash
 python3 scripts/ingest_source.py \
-  "https://www.bilibili.com/video/BVxxxx" \
-  --output-dir ./outputs/source \
+  --url "https://www.bilibili.com/video/BVxxxx" \
+  --out ./outputs/my_video/source \
   --cookies-from-browser chrome \
   --json
 ```
 
-For a specific section:
+Adopt a local source:
 
 ```bash
 python3 scripts/ingest_source.py \
-  "https://www.bilibili.com/video/BVxxxx" \
-  --output-dir ./outputs/source \
-  --cookies-from-browser chrome \
-  --download-section "*01:28:00-01:32:03" \
-  --expected-duration 243 \
+  --local ./source.mp4 \
+  --out ./outputs/my_video/source \
   --json
 ```
+
+Normalize subtitles:
+
+```bash
+python3 scripts/parse_transcript.py \
+  --input ./outputs/my_video/source/source.srt \
+  --out ./outputs/my_video/subtitles/normalized_cues.json \
+  --lead-sec 0.8 \
+  --json
+```
+
+Rank candidate segments:
+
+```bash
+python3 scripts/rank_segments.py \
+  --input ./outputs/my_video/subtitles/normalized_cues.json \
+  --mode traffic \
+  --top-k 5 \
+  --json
+```
+
+Create a render spec template:
+
+```bash
+python3 scripts/render_clip.py --print-spec-template
+```
+
+Dry-run or render:
+
+```bash
+python3 scripts/render_clip.py --spec ./outputs/my_video/render_specs/render_spec.json --dry-run
+python3 scripts/render_clip.py --spec ./outputs/my_video/render_specs/render_spec.json
+```
+
+Strict verification:
+
+```bash
+python3 scripts/verify_render.py \
+  --spec ./outputs/my_video/render_specs/render_spec.json \
+  --video ./outputs/my_video/renders/final.mp4 \
+  --strict \
+  --json > ./outputs/my_video/qa/qa_report.json
+```
+
+## Key Artifacts
+
+- `normalized_cues.json`: structured subtitle cues with `cue_id`, source timing, display timing, `en`, `zh`, source file, and optional speaker.
+- `render_spec.json`: replayable render contract containing source video, segment boundaries, subtitle source, subtitle lead, layout profile, B-roll plan, and output profile.
+- `subtitles_preview.ass` / `subtitles_final.ass`: ASS subtitles generated from normalized cues.
+- `subtitle_timing_report.json`: cue timing, lane assignment, lead, and overlap-related metadata.
+- `broll_plan.json` / `asset_manifest.json`: B-roll timing, source, license/source note, and subtitle avoidance strategy.
+- `render_manifest.json`: final render metadata, cue count, lead, B-roll coverage, ffmpeg info, input/output hashes, and delivery paths.
 
 ## Bilibili Notes
 
@@ -47,7 +114,19 @@ Bilibili downloads must be validated with `ffprobe`: a file can appear complete 
 
 ## Repository Layout
 
-- `SKILL.md`: main agent workflow.
+- `SKILL.md`: main stage-gated agent workflow.
 - `references/`: detailed workflow references.
-- `scripts/`: reusable ingestion, parsing, ranking, rendering, and verification helpers.
+- `scripts/`: ingestion, subtitle normalization, ranking, rendering, and verification helpers.
+- `tests/`: contract tests for the productized pipeline.
 - `agents/`: UI metadata for the skill.
+
+## Verification
+
+Recommended checks before committing changes:
+
+```bash
+python3 -m py_compile scripts/*.py
+python3 -m unittest tests/test_pipeline_contracts.py
+python3 scripts/check_env.py --task render --json
+python3 scripts/render_clip.py --print-spec-template
+```

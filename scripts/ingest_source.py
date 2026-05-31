@@ -259,8 +259,11 @@ def choose_subtitle_file(subtitle_files: list[Path], preferred_langs: list[str])
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Download a URL video and its subtitles.")
-    parser.add_argument("url", help="YouTube or Bilibili URL.")
-    parser.add_argument("--output-dir", required=True, help="Root directory for downloaded assets.")
+    parser.add_argument("url", nargs="?", help="YouTube/Bilibili URL or local video path.")
+    parser.add_argument("--url", dest="url_option", help="YouTube or Bilibili URL.")
+    parser.add_argument("--local", help="Local video path to adopt.")
+    parser.add_argument("--out", help="Root directory for downloaded/adopted assets.")
+    parser.add_argument("--output-dir", help="Root directory for downloaded assets.")
     parser.add_argument("--cookies-file", help="Exported cookies.txt file.")
     parser.add_argument("--cookies-from-browser", help="Browser source name for yt-dlp.")
     parser.add_argument(
@@ -280,8 +283,15 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Print machine-readable manifest.")
     args = parser.parse_args()
 
-    root = Path(args.output_dir).expanduser()
-    source_path = Path(args.url).expanduser()
+    source = args.local or args.url_option or args.url
+    output_dir = args.out or args.output_dir
+    if not source:
+        raise SystemExit("Provide a URL/local path via positional argument, --url, or --local.")
+    if not output_dir:
+        raise SystemExit("Provide an output directory via --out or --output-dir.")
+
+    root = Path(output_dir).expanduser()
+    source_path = Path(source).expanduser()
     preferred_langs = [item.strip() for item in args.preferred_sub_langs.split(",") if item.strip()]
 
     if source_path.exists():
@@ -303,7 +313,7 @@ def main() -> int:
         selected_subtitle = choose_subtitle_file(subtitle_files, preferred_langs)
         probe = probe_streams(video_file)
         manifest = {
-            "url": args.url,
+            "url": source,
             "platform": platform,
             "id": video_id,
             "title": source_path.stem,
@@ -320,8 +330,8 @@ def main() -> int:
             "ready_for_transcript": bool(selected_subtitle),
         }
     else:
-        platform = detect_platform(args.url)
-        meta = load_metadata(args.url, args.cookies_file, args.cookies_from_browser)
+        platform = detect_platform(source)
+        meta = load_metadata(source, args.cookies_file, args.cookies_from_browser)
         video_id = str(meta.get("id") or "").strip()
         if not video_id:
             raise SystemExit("Could not resolve video id from source metadata.")
@@ -332,7 +342,7 @@ def main() -> int:
         ffmpeg_location = args.ffmpeg_location or (str(Path(ffmpeg_bin).parent) if ffmpeg_bin else None)
 
         download_cmd = build_download_cmd(
-            args.url,
+            source,
             outdir,
             args.cookies_file,
             args.cookies_from_browser,
@@ -354,7 +364,7 @@ def main() -> int:
         if not valid_streams(probe, expected_duration):
             video_file.unlink(missing_ok=True)
             fallback_cmd = build_download_cmd(
-                args.url,
+                source,
                 outdir,
                 args.cookies_file,
                 args.cookies_from_browser,
@@ -376,7 +386,7 @@ def main() -> int:
 
         selected_subtitle = choose_subtitle_file(subtitle_files, preferred_langs)
         manifest = {
-            "url": args.url,
+            "url": source,
             "platform": platform,
             "id": video_id,
             "title": meta.get("title"),

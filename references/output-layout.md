@@ -1,84 +1,62 @@
 # Output Layout
 
-最终切片产物使用统一的视频级根目录。
+每个来源视频使用一个视频级根目录。不要把最终成片、字幕、素材清单散落在临时目录。
 
-## 根目录
-
-```text
-outputs/
-  <source_title>_<platform>_<theme>/
-```
-
-示例：
+## 标准结构
 
 ```text
-outputs/黄仁勋2026演讲_抖音励志切片/
-outputs/鲁豫对话刘晓庆_抖音共鸣切片/
-```
-
-## 推荐目录结构
-
-```text
-outputs/<source_title>_<platform>_<theme>/
-  00_source/
+<video_root>/
+  source/
     source.mp4
     source.srt
-    source.ass
     manifest.json
-  00_assets/
+  subtitles/
+    normalized_cues.json
+    subtitles_preview.ass
+    subtitles_final.ass
+    subtitle_timing_report.json
+  segments/
+    candidates.json
+    selected_segment.json
+  assets/
     broll/
-      01_storm_at_sea.mp4
-      02_lightning_clouds.mp4
+    broll_plan.json
     asset_manifest.json
-  00_index/
-    切片目录.md
-  00_concat/
-    <source_title>_合集_横屏.mp4
-  01_<片段主题>/
-    <片段主题>.mp4
-    <片段主题>_分镜版.mp4
-    <片段主题>_Aroll版.mp4
-    <片段主题>_分镜双语字幕版.mp4
-    双语字幕.srt
-    双语字幕.ass
+  render_specs/
+    render_spec.json
+  renders/
+    final.mp4
+    render_manifest.json
+  qa/
+    qa_report.json
+    frames/
+  delivery/
+    final.mp4
+    render_manifest.json
+    normalized_cues.json
+    subtitles_final.ass
+    qa_report.json
     配文.md
     推荐标题.md
-    render_manifest.json
-    preview_frames/
-  02_<片段主题>/
-    ...
 ```
 
 ## 命名规则
 
-- 目录前缀用两位数递增：`01_`、`02_`
-- 主题目录名要短、可读、适合展示
-- 成片文件名与目录主题一致
-- 字幕统一命名为 `双语字幕.srt` 和 `双语字幕.ass`
-- 文案统一命名为 `配文.md`
-- 标题建议统一命名为 `推荐标题.md`
-- 渲染记录统一命名为 `render_manifest.json`
-- 预览抽帧放在 `preview_frames/`
+- 最终视频固定叫 `final.mp4`，除非用户指定平台命名。
+- 字幕中间数据固定叫 `normalized_cues.json`。
+- 最终视觉字幕固定叫 `subtitles_final.ass`。
+- 可审阅字幕固定叫 `subtitles_preview.ass`。
+- QA 帧放入 `qa/frames/`。
+- 临时渲染文件只能放 `_tmp_render/`、`tmp/` 或系统临时目录。
 
-## 可选产物
+## 交付规则
 
-根据任务需要可额外放：
+`render_final` 交付至少包含：
 
-- `封面_3x4.png`
-- `封面_9x16.png`
-- `分镜版.mp4`
-- `参考帧/`
-- `subtitle_preview/`
-- `timing_report.json`
-- `00_assets/broll/`
-- `00_assets/asset_manifest.json`
+- `delivery/final.mp4`
+- `delivery/render_manifest.json`
+- `delivery/normalized_cues.json`
+- `delivery/subtitles_final.ass`
+- `delivery/qa_report.json`
 
-## 原则
-
-- 生成目录只承载最终交付物
-- `source/` 只放输入落盘结果
-- `00_assets/` 只放可复用素材和素材来源清单
-- 临时文件放 `tmp/` 或系统临时目录
-- 不要把不同视频混在同一目录层级
-- 同一视频的所有切片必须落在同一根目录下
-- 最终成片目录不要塞进一次性草稿文件
+`render_draft` 可以缺 B-roll 或 QA 帧，但 manifest 和 QA report 必须说明缺口。

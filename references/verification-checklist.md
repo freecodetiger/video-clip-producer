@@ -1,51 +1,55 @@
 # Verification Checklist
 
-在把结果交给用户前，至少做下面这些检查。
+最终交付前必须有脚本证据和人工可读报告。`render_final` 不能只说“看起来可以”。
 
-## 输入检查
+## 命令
 
-- URL 或本地文件是否已识别
-- 视频文件是否存在
-- 字幕文件是否存在
-- 如果用户提供了本地 B-roll，目录是否存在
-- 如果用户没有本地 B-roll，是否已自动获取免版权自然素材
-- 输出目录是否可写
+```bash
+python3 scripts/verify_render.py --spec render_specs/render_spec.json --video renders/final.mp4 --strict --json > qa/qa_report.json
+```
 
-## 环境检查
+## Strict 必查项
 
-- 当前任务所需的工具是否可用
-- 如果走下载路径，再确认 `yt-dlp`
-- 如果走封装路径，再确认 `ffmpeg` / `ffprobe`
-- 如果走字幕烧录路径，再确认 `subtitles` / `libass`
-- 只有用到文字叠加时才检查 `drawtext`
+- `render_spec.json` 存在且字段完整。
+- `render_manifest.json` 存在。
+- final video 存在，可被 `ffprobe` 读取。
+- 有视频轨和音频轨。
+- 时长与 `segment_end - segment_start` 在容忍范围内。
+- 分辨率符合 `output_profile` / `layout_profile`。
+- `subtitles_final.ass` 存在。
+- ASS Dialogue 格式合法。
+- 同一 lane/layer 没有不可读时间重叠。
+- cue 数与 manifest 一致。
+- `lead_sec` 已记录。
+- `source_time_basis` 指向 `normalized_cues.json`。
+- `subtitle_burn_source_is_clean` 为 true。
+- B-roll 来源、许可/来源说明和覆盖位置已记录。
 
-## 内容检查
+## QA 帧
 
-- 候选片段排序合理
-- 片段没有断章取义到扭曲事实
-- 每个候选都能单独成立
-- `user_select` 模式下，用户已经明确确认了要剪哪一段
-- `agent_auto_select` 模式下，已记录自动选择的排名和理由
+生成到 `qa/frames/`，至少覆盖：
 
-## 成片检查
+- 开头第一句字幕。
+- 中段普通字幕。
+- 字幕密集处。
+- B-roll 覆盖处。
+- 结尾最后一句字幕。
 
-- 视频时长正确
-- 音轨存在
-- 字幕已烧录或已明确保留为外挂字幕
-- B-roll 没有压过字幕
-- 自动获取的 B-roll 是否有 `asset_manifest.json`
-- B-roll 来源是否记录了 URL / 许可 / 查询关键词
-- 字幕一开口就能跟上
-- 字幕位置没有压住原视频下方信息层
-- 长句已按语义断句，不是一整条硬塞
-- 双语顺序是中文主、英文副
+基础可视检查：
 
-## 交付检查
+- 字幕没有长时间滞留超过源结束后的容忍阈值。
+- 同一时间窗口内不存在不可读叠字。
+- B-roll 没有遮挡字幕安全区。
+- 中英文上下关系稳定，且同起同落。
 
-- 最终目录结构符合规范
-- `配文.md` 已生成
-- `推荐标题.md` 已生成
-- `render_manifest.json` 已生成
-- 如果使用自动 B-roll，`00_assets/asset_manifest.json` 已生成
-- 已运行 `scripts/verify_render.py`
-- 临时文件没有混进最终交付目录
+## Final Delivery
+
+`delivery/` 必含：
+
+- `final.mp4`
+- `render_manifest.json`
+- `normalized_cues.json`
+- `subtitles_final.ass`
+- `qa_report.json`
+
+如果任一项缺失，`render_final` 阻塞。`render_draft` 可以交付但必须标注为 draft，并列出未通过项。

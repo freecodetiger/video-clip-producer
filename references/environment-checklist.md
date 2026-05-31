@@ -36,9 +36,36 @@
 
 只有当前渲染路径会用到时再检查：
 
+- `ffmpeg` 支持 `ass`
 - `ffmpeg` 支持 `subtitles`
 - `ffmpeg` 编译时包含 `libass`
 - `ffmpeg` 支持 `drawtext`（仅在确实使用文字叠加时）
+- `ffmpeg` 支持渲染脚本实际使用的基础 filters：`scale`、`crop`、`format`、`loudnorm`
+- `ffmpeg` 支持渲染脚本实际使用的 encoders：`libx264`、`aac`
+- 字幕烧录路径默认跑一次最小 ASS smoke test，确认 `ass + libx264 + aac` 能真实产出 mp4
+
+macOS 上如果缺少 `ass`、`subtitles`、`libass`、`libx264` 或 smoke test 失败，优先建议安装 `ffmpeg-full`：
+
+```bash
+brew install ffmpeg-full
+```
+
+如果用户已经有自定义安装，可以通过环境变量指定：
+
+```bash
+FFMPEG=/path/to/ffmpeg FFPROBE=/path/to/ffprobe python3 scripts/check_env.py --task render --json
+```
+
+## 标准命令
+
+```bash
+python3 scripts/check_env.py --task ingest --json
+python3 scripts/check_env.py --task subtitle --json
+python3 scripts/check_env.py --task render --json
+python3 scripts/check_env.py --task final --json
+```
+
+`final` 是最严格的 profile，必须覆盖下载后最终烧字幕成片需要的 `ffmpeg`、`ffprobe`、filters、encoders 和 ASS smoke test。
 
 ### 5) 可选增强
 
@@ -66,6 +93,7 @@
 - 哪些步骤还能继续
 - 当前任务的最小补齐方式
 - 不要为了一个缺口，建议整套重装环境
+- 如果缺口来自字幕烧录或渲染 codec，优先建议 `ffmpeg-full`，不要推荐普通 `ffmpeg` 作为第一选择
 
 ## B-roll 特例
 
